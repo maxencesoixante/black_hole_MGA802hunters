@@ -13,3 +13,4 @@ donnees_propres = cleaner.process_data()
 # 4. On vérifie que Pandas a bien fait son travail
 print("\nVoici les 5 premières lignes des données prêtes pour l'IA :")
 print(donnees_propres.head())
+print(f"Nombre total de points analysés : {len(donnees_propres)}")

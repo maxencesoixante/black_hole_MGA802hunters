@@ -17,15 +17,15 @@ class AstroFetcher:
         """
         Cherche et télécharge les données de l'astre ciblé.
         """
-        print(f"📡 Recherche des données pour l'astre {self.target_id} (Mission: {mission})...")
+        print(f"Recherche des données pour l'astre {self.target_id} (Mission: {mission})...")
 
         # Recherche dans les bases de données de la NASA
         search_result = lk.search_lightcurve(self.target_id, mission=mission)
 
         if len(search_result) == 0:
-            raise ValueError(f"❌ Aucune donnée trouvée pour {self.target_id}. Vérifiez l'identifiant.")
+            raise ValueError(f"Aucune donnée trouvée pour {self.target_id}. Vérifiez l'identifiant.")
 
-        print(f"✅ Données trouvées. Téléchargement du premier jeu d'observations...")
+        print(f"Données trouvées. Téléchargement du premier jeu d'observations...")
 
         # Téléchargement de la première courbe de lumière disponible
         raw_lightcurve = search_result[0].download()
@@ -47,7 +47,7 @@ class SignalCleaner:
         Nettoie la courbe de lumière et la convertit en DataFrame Pandas
         pour faciliter le travail de Machine Learning.
         """
-        print("🧹 Nettoyage des données en cours...")
+        print("Nettoyage des données en cours...")
 
         # 1. Enlever les "trous" (Valeurs manquantes ou NaN)
         clean_lc = self.lc.remove_nans()
@@ -63,5 +63,5 @@ class SignalCleaner:
             'flux': flat_lc.flux.value
         })
 
-        print("✨ Nettoyage terminé. Données prêtes pour l'analyse.")
+        print("Nettoyage terminé. Données prêtes pour l'analyse.")
         return df
