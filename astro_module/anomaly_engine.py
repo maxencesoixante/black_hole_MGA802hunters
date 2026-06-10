@@ -62,7 +62,7 @@ class AnomalyDetector:
 
         return self.df
 
-    def get_anomaly_segments(self, min_gap: int = 20) -> list[dict]:
+    def get_anomaly_segments(self, min_gap: int = 50) -> list[dict]:
         """
         Groups consecutive anomalous points into segments (events).
 
@@ -139,7 +139,7 @@ class AnomalyClassifier:
         - MICROLENSING: symmetric bell-shaped brightening (symmetric flux increase)
     """
 
-    DIP_THRESHOLD = -0.002      # normalized flux minimum below this → dip event
+    DIP_THRESHOLD = -0.0008
     ASYMMETRY_THRESHOLD = 0.30  # slope asymmetry ratio above this → Flare
 
     def classify_segment(self, segment: dict) -> dict:

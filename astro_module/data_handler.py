@@ -1,11 +1,10 @@
 import warnings
-warnings.filterwarnings('ignore') # Masque les avertissements inoffensifs
+warnings.filterwarnings('ignore')
+
 import lightkurve as lk
 import pandas as pd
-import warnings
+import numpy as np
 import os
-
-warnings.filterwarnings('ignore')
 
 
 class AstroFetcher:
@@ -48,8 +47,19 @@ class AstroFetcher:
 
 class SignalCleaner:
     """
-    Class responsible for preprocessing data.
-    It adapts automatically to Lightkurve objects or Pandas DataFrames.
+    Class responsible for preprocessing light curve data.
+    Adapts automatically to Lightkurve objects or Pandas DataFrames.
+
+    IMPORTANT — why we do NOT use flatten():
+    -----------------------------------------
+    Lightkurve's flatten() fits and divides out a smooth trend over a long
+    window (typically 401 points). This removes instrumental drift, which is
+    useful — but it also suppresses exoplanet transit dips, because a ~15-point
+    dip looks like a short-term trend to the smoother.
+
+    Instead, we normalise the flux by its median so all values sit near 1.0.
+    This keeps the relative depth of transits (~0.1–1% dips) intact while
+    still making the signal scale-invariant and comparable across targets.
     """
 
     def __init__(self, raw_data):
@@ -58,33 +68,45 @@ class SignalCleaner:
     def process_data(self):
         print("Cleaning data...")
 
-        # 1. If the data is a Pandas DataFrame (Local CSV / Kaggle)
+        # 1. Pandas DataFrame (local CSV / Kaggle)
         if isinstance(self.data, pd.DataFrame):
             print("Data format: Pandas DataFrame. Applying standard statistical cleaning...")
-            # Remove missing values
+
             df = self.data.dropna(subset=['time', 'flux'])
 
-            # Remove extreme mathematical outliers (5 standard deviations)
+            # Remove extreme outliers (5 sigma)
             mean_flux = df['flux'].mean()
             std_flux = df['flux'].std()
-            df = df[(df['flux'] >= mean_flux - 5 * std_flux) & (df['flux'] <= mean_flux + 5 * std_flux)]
+            df = df[
+                (df['flux'] >= mean_flux - 5 * std_flux) &
+                (df['flux'] <= mean_flux + 5 * std_flux)
+            ].copy()
 
-            print("Cleaning complete.")
-            return df
+            # Normalize around median
+            median_flux = df['flux'].median()
+            df['flux'] = df['flux'] / (median_flux + 1e-10)
 
-        # 2. If the data is a Lightkurve object (NASA API)
+            print(f"Cleaning complete. ({len(df)} points retained)")
+            return df.reset_index(drop=True)
+
+        # 2. Lightkurve object (NASA API)
         else:
             print("Data format: Lightkurve Object. Applying astrophysical cleaning...")
-            clean_lc = self.data.remove_nans()
-            flat_lc = clean_lc.flatten(window_length=401).remove_outliers(sigma=5)
+
+            # Remove NaNs and sigma-clip outliers — NO flatten() to preserve transit dips
+            clean_lc = self.data.remove_nans().remove_outliers(sigma=5)
+
+            # Normalize flux around median so values sit near 1.0
+            flux_values = clean_lc.flux.value
+            median_flux = float(np.median(flux_values))
 
             df = pd.DataFrame({
-                'time': flat_lc.time.value,
-                'flux': flat_lc.flux.value
+                'time': clean_lc.time.value,
+                'flux': flux_values / (median_flux + 1e-10)
             })
 
-            print("Cleaning complete.")
-            return df
+            print(f"Cleaning complete. ({len(df)} points retained)")
+            return df.reset_index(drop=True)
 
     def save_to_csv(self, df, filename="clean_data.csv"):
         """Saves the cleaned DataFrame to a local CSV file."""
