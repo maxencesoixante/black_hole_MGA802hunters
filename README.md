@@ -1,4 +1,4 @@
-# Automated Astronomical Anomaly Detector 🌌
+# Automated Astronomical Anomaly Detector 
 
 **Session Project - MGA 802: Introduction to Programming with Python**
 
