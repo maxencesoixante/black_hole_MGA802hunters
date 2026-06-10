@@ -45,4 +45,5 @@ To ensure equitable participation and cover all course requirements (data manipu
 
 ## References and Dependencies
 - [[Lightkurve Documentation](https://docs.lightkurve.org/)](https://lightkurve.github.io/lightkurve/reference/search.html)
+- Reference about stellar flare morphology with TESS across the main sequence : https://www.aanda.org/articles/aa/full_html/2025/02/aa52489-24/aa52489-24.html
 - Numpy, Pandas, Matplotlib, Scikit-Learn
