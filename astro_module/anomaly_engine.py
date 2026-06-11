@@ -9,7 +9,7 @@ class AnomalyDetector:
     rolling mean, based on a dynamic threshold (N × local std).
     """
 
-    def __init__(self, df: pd.DataFrame, window: int = 50, sigma_threshold: float = 3.0):
+    def __init__(self, df: pd.DataFrame, window: int = 200, sigma_threshold: float = 3.0):
         """
         Parameters
         ----------
@@ -62,16 +62,20 @@ class AnomalyDetector:
 
         return self.df
 
-    def get_anomaly_segments(self, min_gap: int = 50) -> list[dict]:
+    def get_anomaly_segments(self, min_gap_days: float = 0.5) -> list[dict]:
         """
-        Groups consecutive anomalous points into segments (events).
+        Groups anomalous points into segments based on temporal proximity.
+
+        Instead of grouping by index distance, we group by time gap — this
+        correctly merges all points belonging to the same transit (~7-15 hours)
+        even when they are not strictly consecutive in index.
 
         Parameters
         ----------
-        min_gap : int
-            Minimum number of normal points between two anomalies to consider
-            them as separate events. Increased to 20 to properly merge
-            multi-point events like exoplanet transits.
+        min_gap_days : float
+            Maximum time gap (in days) between two anomalous points to
+            consider them part of the same event. Default 0.5 days (12h),
+            which covers a full Kepler transit (~6-10h).
 
         Returns
         -------
@@ -91,12 +95,15 @@ class AnomalyDetector:
             print("No anomaly segments to extract.")
             return []
 
-        # Group indices into segments separated by at least min_gap normal points
+        # Group by temporal proximity
+        times = self.df.loc[anomaly_indices, 'time'].values
         segments = []
         current_segment = [anomaly_indices[0]]
 
-        for idx in anomaly_indices[1:]:
-            if idx - current_segment[-1] <= min_gap:
+        for i in range(1, len(anomaly_indices)):
+            idx = anomaly_indices[i]
+            time_gap = times[i] - times[i - 1]
+            if time_gap <= min_gap_days:
                 current_segment.append(idx)
             else:
                 segments.append(current_segment)
@@ -111,7 +118,6 @@ class AnomalyDetector:
             end = min(len(self.df) - 1, seg[-1] + context)
             segment_df = self.df.loc[start:end]
 
-            # Peak = point with largest absolute deviation from rolling mean
             deviations = np.abs(
                 self.df.loc[seg, 'flux'].values - self.df.loc[seg, 'rolling_mean'].values
             )
@@ -131,24 +137,31 @@ class AnomalyDetector:
 
 class AnomalyClassifier:
     """
-    Classifies an anomaly segment into one of three astrophysical event types
-    based on light curve shape analysis:
+    Classifies an anomaly segment into one of four categories:
 
-        - FLARE       : sudden spike upward, fast rise / slow decay (asymmetric slopes)
-        - TRANSIT     : U-shaped dip (symmetric flux decrease below baseline)
-        - MICROLENSING: symmetric bell-shaped brightening (symmetric flux increase)
+        - TRANSIT      : U-shaped dip (exoplanet passing in front of the star)
+        - FLARE        : fast-rise slow-decay spike (stellar magnetic eruption)
+        - MICROLENSING : symmetric bell-shaped brightening over several days
+                         (massive object acting as gravitational lens)
+        - NOISE        : signal too weak or too short to be a real event
+
+    Classification logic
+    --------------------
+    1. Direction  → dip below baseline   : TRANSIT
+    2. Asymmetry  → rise faster than decay : FLARE
+    3. Amplitude + duration checks:
+         - too weak OR too short          : NOISE
+         - otherwise                      : MICROLENSING
     """
 
-    DIP_THRESHOLD = -0.0008
-    ASYMMETRY_THRESHOLD = 0.30  # slope asymmetry ratio above this → Flare
+    DIP_THRESHOLD = -0.0008             # normalized flux below this → dip (TRANSIT)
+    ASYMMETRY_THRESHOLD = 0.30          # slope asymmetry above this → FLARE
+    MIN_MICROLENSING_AMPLITUDE = 0.005  # était 0.0005 → x10 plus strict
+    MIN_MICROLENSING_DURATION = 0.3     # min duration in days (~7h) for MICROLENSING
 
     def classify_segment(self, segment: dict) -> dict:
         """
-        Classifies a single segment using slope-based asymmetry.
-
-        Instead of comparing left/right half *lengths* (which are always equal
-        for single-point anomalies), we compare the mean absolute *slope*
-        on each side of the peak — a flare rises steeply and decays slowly.
+        Classifies a single segment.
 
         Parameters
         ----------
@@ -158,33 +171,32 @@ class AnomalyClassifier:
         Returns
         -------
         dict with keys:
-            - 'event_type'  : str   ('FLARE', 'TRANSIT', or 'MICROLENSING')
+            - 'event_type'  : str   ('TRANSIT', 'FLARE', 'MICROLENSING', or 'NOISE')
             - 'confidence'  : float between 0 and 1
-            - 'description' : str   (human-readable explanation)
+            - 'description' : str
         """
         flux = segment['flux']
+        time = segment['time']
 
         if len(flux) < 5:
             return {
-                'event_type': 'UNKNOWN',
+                'event_type': 'NOISE',
                 'confidence': 0.0,
                 'description': 'Segment too short to classify.'
             }
 
-        # --- Normalize flux around local median (robust baseline) ---
+        # Normalize flux around local median (robust baseline)
         baseline = np.median(flux)
         norm_flux = (flux - baseline) / (np.abs(baseline) + 1e-10)
 
-        # --- Find peak (maximum absolute deviation) ---
+        # Find peak (maximum absolute deviation)
         peak_idx = int(np.argmax(np.abs(norm_flux)))
         peak_value = norm_flux[peak_idx]
 
-        # ---- Feature 1: Direction (dip or brightening) ----
+        # Feature 1: Direction (dip or brightening)
         is_dip = peak_value < self.DIP_THRESHOLD
 
-        # ---- Feature 2: Slope-based asymmetry ----
-        # Rise slope = mean |Δflux| per step on the left side of peak
-        # Decay slope = mean |Δflux| per step on the right side of peak
+        # Feature 2: Slope-based asymmetry
         left_flux = norm_flux[:peak_idx + 1]
         right_flux = norm_flux[peak_idx:]
 
@@ -192,22 +204,26 @@ class AnomalyClassifier:
         decay_slope = np.mean(np.abs(np.diff(right_flux))) if len(right_flux) > 1 else 0.0
 
         slope_sum = rise_slope + decay_slope + 1e-10
-        # Positive → rise faster than decay (Flare pattern)
-        # Near 0   → symmetric (Microlensing or Transit)
         slope_asymmetry = (rise_slope - decay_slope) / slope_sum
 
-        # ---- Feature 3: Sharpness (peak vs wing ratio) ----
+        # Feature 3: Sharpness
         wing_mean = np.mean(np.abs(norm_flux[[0, -1]])) + 1e-10
         sharpness = np.abs(peak_value) / wing_mean
 
-        # ---- Classification logic ----
+        # Feature 4: Duration and amplitude (for NOISE filtering)
+        duration_days = float(time[-1] - time[0])
+        amplitude = float(np.abs(peak_value))
+
+        # ── Classification ──────────────────────────────────────────────────
+
         if is_dip:
             event_type = 'TRANSIT'
             sym = 1.0 - abs(slope_asymmetry)
             confidence = round(float(np.clip(0.5 + sym * 0.49, 0.4, 0.99)), 2)
             description = (
                 f"U-shaped flux dip detected "
-                f"(slope asymmetry={slope_asymmetry:.2f}, sharpness={sharpness:.1f}). "
+                f"(slope asymmetry={slope_asymmetry:.2f}, sharpness={sharpness:.1f}, "
+                f"duration={duration_days:.2f}d). "
                 "Consistent with an exoplanet transit."
             )
 
@@ -216,8 +232,19 @@ class AnomalyClassifier:
             confidence = round(float(np.clip(0.5 + slope_asymmetry * 0.49, 0.4, 0.99)), 2)
             description = (
                 f"Fast-rise slow-decay spike detected "
-                f"(slope asymmetry={slope_asymmetry:.2f}, sharpness={sharpness:.1f}). "
+                f"(slope asymmetry={slope_asymmetry:.2f}, sharpness={sharpness:.1f}, "
+                f"duration={duration_days:.2f}d). "
                 "Consistent with a stellar flare."
+            )
+
+        elif amplitude < self.MIN_MICROLENSING_AMPLITUDE or duration_days < self.MIN_MICROLENSING_DURATION:
+            # Symmetric brightening but too weak or too short → likely noise
+            event_type = 'NOISE'
+            confidence = round(float(np.clip(1.0 - amplitude * 1000, 0.5, 0.95)), 2)
+            description = (
+                f"Signal too weak or too short to be a real astrophysical event "
+                f"(amplitude={amplitude:.5f}, duration={duration_days:.2f}d). "
+                "Classified as residual noise."
             )
 
         else:
@@ -225,8 +252,8 @@ class AnomalyClassifier:
             sym = 1.0 - abs(slope_asymmetry)
             confidence = round(float(np.clip(0.5 + sym * 0.49, 0.4, 0.99)), 2)
             description = (
-                f"Symmetric brightness increase detected "
-                f"(slope asymmetry={slope_asymmetry:.2f}, sharpness={sharpness:.1f}). "
+                f"Symmetric brightness increase over {duration_days:.2f} day(s) detected "
+                f"(slope asymmetry={slope_asymmetry:.2f}, amplitude={amplitude:.5f}). "
                 "Consistent with gravitational microlensing."
             )
 
@@ -239,16 +266,7 @@ class AnomalyClassifier:
     def classify_all(self, segments: list[dict]) -> list[dict]:
         """
         Classifies all segments and returns enriched results.
-
-        Parameters
-        ----------
-        segments : list of dict
-            Output of AnomalyDetector.get_anomaly_segments().
-
-        Returns
-        -------
-        list of dict, each combining the original segment data with
-        the classification result.
+        NOISE events are filtered out of the final output.
         """
         if not segments:
             print("No segments to classify.")
@@ -256,9 +274,15 @@ class AnomalyClassifier:
 
         print(f"Classifying {len(segments)} segment(s)...")
         results = []
+        noise_count = 0
 
         for i, segment in enumerate(segments):
             classification = self.classify_segment(segment)
+
+            if classification['event_type'] == 'NOISE':
+                noise_count += 1
+                continue  # Skip noise — don't add to results
+
             result = {**segment, **classification}
             results.append(result)
             print(
@@ -266,4 +290,5 @@ class AnomalyClassifier:
                 f"(confidence={classification['confidence']:.0%}) — {classification['description']}"
             )
 
+        print(f"  ({noise_count} segment(s) discarded as noise)")
         return results
