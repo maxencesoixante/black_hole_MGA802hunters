@@ -8,7 +8,7 @@
 | | |
 |---|---|
 | **Équipe** | Maxence Dubois · Jules Hua · Alexandre Sandre |
-| **Session** | Hiver 2026 |
+| **Session** | Été 2026 |
 | **Dépôt** | `black_hole_MGA802hunters` |
 | **Données** | NASA KEPLER & TESS (API `lightkurve`) |
 | **Langage** | Python 3.14 — paradigme orienté objet |
