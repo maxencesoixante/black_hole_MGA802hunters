@@ -389,6 +389,8 @@ class AstroPlotter:
 
         # plt.show() opens the interactive Matplotlib window.
         # The programme pauses here until the user closes the window.
-        plt.show()
-        plt.close(fig)   # free memory after the window is closed
+        # plt.show()  # Commenté pour Streamlit
+        # plt.close(fig)   # free memory after the window is closed
 
+        # Return the figure object for Streamlit
+        return fig
