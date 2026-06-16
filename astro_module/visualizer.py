@@ -215,5 +215,8 @@ class AstroPlotter:
             fig.savefig(save_path, dpi=150, bbox_inches='tight')
             print(f"Figure saved to: {save_path}")
 
-        plt.show()
-        plt.close(fig)   # free memory after the window is closed
+        # plt.show()  # Commenté pour Streamlit
+        # plt.close(fig)   # free memory after the window is closed
+
+        # Return the figure object for Streamlit
+        return fig

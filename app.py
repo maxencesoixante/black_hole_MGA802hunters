@@ -1,5 +1,5 @@
 """
-app.py  —  Streamlit Interface for Automated Astronomical Anomaly Detector
+app.py  is a Streamlit Interface for Automated Astronomical Anomaly Detector
 MGA 802 : Introduction to Programming with Python
 
 This script provides a Streamlit-based web interface for the anomaly detection pipeline.
