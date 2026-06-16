@@ -133,15 +133,13 @@ print("-" * 40)
 # no local ±σ band — instead the global baseline envelope plus a diamond on each
 # detected transit.
 plotter = AstroPlotter(
-    df_flagged           = df_flagged,
-    classified_results   = transits,
-    target_id            = target_id,
-    window               = WINDOW,
-    baseline_sigma       = detector.baseline_sigma,
-    global_median        = detector.global_median,
-    global_std           = detector.global_std,
-    show_point_anomalies = False,
-    show_detection_band  = False,
+    df_flagged         = df_flagged,
+    classified_results = transits,
+    target_id          = target_id,
+    window             = WINDOW,
+    baseline_sigma     = detector.baseline_sigma,
+    global_median      = detector.global_median,
+    global_std         = detector.global_std,
 )
 plotter.show_results()
 
@@ -149,10 +147,13 @@ plotter.show_results()
 # ─────────────────────────────────────────────────────────────────────────────
 # 5.  Summary
 # ─────────────────────────────────────────────────────────────────────────────
-n_transits = sum(1 for ev in transits if ev['event_type'] == 'TRANSIT')
+counts = {t: sum(1 for ev in transits if ev['event_type'] == t)
+          for t in ('TRANSIT', 'FLARE', 'MICROLENSING')}
 print("\n" + "=" * 60)
 print(f"   Analysis of  {target_id}  complete.")
-print(f"   {n_transits} transit(s) detected via rolling-window baseline departure:")
+print(f"   {len(transits)} event(s) detected via rolling-window baseline departure")
+print(f"   ({counts['TRANSIT']} transit, {counts['FLARE']} flare, "
+      f"{counts['MICROLENSING']} microlensing):")
 for i, ev in enumerate(transits, start=1):
     print(f"     {i}. {ev['event_type']}  at t={ev['peak_time']:.2f} d  "
           f"(depth: {ev['depth_sigma']}σ / {ev['depth_frac'] * 100:.3f}%, "

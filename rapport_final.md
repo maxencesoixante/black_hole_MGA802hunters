@@ -459,6 +459,21 @@ La bibliothèque `lightkurve` retourne un objet de type `LightCurve` (avec des u
 
 Cette décision illustre le principe de **responsabilité unique** inversé : le module qui connaît les deux formats est la meilleure entité pour gérer la traduction, pas l'appelant.
 
+#### Défi 4 — Limite de sensibilité : flares et microlentilles faibles
+
+Notre détecteur repose entièrement sur l'**écart de la moyenne glissante** par rapport à la base globale de l'étoile (un transit = un creux soutenu de cette base). Cette méthode excelle sur les **événements larges et nets d'étoiles calmes** — nous avons confirmé la détection des transits de Kepler-8 (9 transits), HAT-P-7, et même du transit peu profond de Kepler-10c (0,04 %, validé à 28 minutes près par l'éphéméride publiée).
+
+En revanche, deux familles d'événements sont **hors de portée de cette méthode**, par construction :
+
+| Phénomène | Cible testée | Pourquoi non détectable |
+|---|---|---|
+| **Éruption stellaire (flare)** | GJ 1243 | Un flare est **court et ponctuel** (minutes à ~1 h). La fenêtre glissante (~quelques heures) le **dilue** jusqu'à le noyer dans la modulation rotationnelle de l'étoile active. Résultat : quelques flares détectés parmi une majorité de faux positifs. |
+| **Microlentille gravitationnelle faible** | KOI-3278 (naine blanche micro-lentillant son étoile) | L'impulsion réelle (**0,1 % sur 5 h**) ne pèse que **0,11σ_global** sur cette étoile tachetée (σ = 0,95 %) : très en dessous du seuil, et trop brève. L'algorithme ne « voit » que la variabilité stellaire large, qu'il étiquette à tort. |
+
+**Nuance importante :** la *classification* sait nommer ces événements (un creux → `TRANSIT`, une montée asymétrique → `FLARE`, une montée symétrique → `MICROLENSING`). Le maillon manquant n'est pas l'étiquetage mais la **détection** : la méthode par fenêtre glissante, optimisée pour les événements larges, ne fait pas remonter les signaux courts (flares) ni les signaux faibles et brefs (microlentilles). Les capter proprement exigerait un **canal complémentaire à courte échelle de temps** (détection de pics brefs pour les flares) ou un **repliement sur la période** pour empiler un signal périodique faible.
+
+**Ce que cela nous a appris :** chaque méthode de détection a un « domaine de sensibilité » (profondeur × durée) en dehors duquel elle est aveugle. Connaître et documenter ce domaine est aussi important que d'exhiber les détections réussies — un algorithme honnête annonce ce qu'il *ne peut pas* voir.
+
 ### 3.3 Ce que le projet nous a appris
 
 **Sur la programmation orientée objet :**
