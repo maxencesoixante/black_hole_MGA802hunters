@@ -271,6 +271,22 @@ class AnomalyDetector:
         event.  The point requirement also rejects the flat rolling-mean plateaus
         that appear across observation gaps (few points spanning a long time).
 
+        ── Known sensitivity limit (documented, not a bug) ──────────────────────
+        This method only sees BROAD departures of the baseline, so it has a blind
+        spot for two event families:
+
+          • FLARES — short, sharp brightenings (minutes–~1 h).  The rolling window
+            dilutes them; on an active star they drown in the rotational
+            modulation (tested on GJ 1243).
+          • FAINT, SHORT MICROLENSING — e.g. KOI-3278's self-lensing pulse
+            (0.1 % over 5 h) is only ~0.11σ_global on its spotted host: below the
+            threshold and too brief.  Only the host's broad variability is seen.
+
+        The shape CLASSIFIER below can still label such events (FLARE / MICROLENSING)
+        once detected — the gap is detection, not labelling.  Catching them would
+        need a complementary SHORT-timescale channel (brief-spike detection for
+        flares) or PERIOD FOLDING to stack a weak periodic signal.
+
         Parameters
         ----------
         baseline_sigma : float
@@ -368,14 +384,19 @@ class AnomalyDetector:
             signed    = float(run_dep[local_pk])
 
             direction = 'DIP' if signed < 0 else 'BUMP'
-            # A sustained dimming of the baseline IS the signature of a transit
-            # (planet crossing the stellar disc).  A sustained brightening is not
-            # a transit — we label it separately so it is never mislabelled.
-            event_type = 'TRANSIT' if direction == 'DIP' else 'BRIGHTENING'
-            candidate = (
-                'transit / eclipse candidate' if direction == 'DIP'
-                else 'brightening (microlensing / flare) candidate'
-            )
+            # Classify the event by its SHAPE:
+            #   DIP                       → TRANSIT      (planet crosses the disc)
+            #   BUMP, asymmetric profile  → FLARE        (fast rise, slow decay)
+            #   BUMP, symmetric profile   → MICROLENSING (a compact foreground
+            #                                             mass — white dwarf, neutron
+            #                                             star or black hole — lenses
+            #                                             the star; symmetric in time)
+            event_type = self._classify_departure(s, e, direction)
+            candidate = {
+                'TRANSIT'     : 'transit / eclipse candidate',
+                'FLARE'       : 'stellar flare candidate',
+                'MICROLENSING': 'microlensing (compact object) candidate',
+            }[event_type]
 
             # Confidence grows with how far the baseline drifted beyond the
             # threshold, clamped to [0.4, 0.99] (never absolutely certain).
@@ -407,10 +428,70 @@ class AnomalyDetector:
             if flag_indices:
                 self.df.loc[flag_indices, 'is_baseline_anomaly'] = True
 
-        n_transit = sum(1 for ev in events if ev['event_type'] == 'TRANSIT')
+        n_by_type = {t: sum(1 for ev in events if ev['event_type'] == t)
+                     for t in ('TRANSIT', 'FLARE', 'MICROLENSING')}
         print(f"{len(events)} baseline-departure event(s) found "
-              f"({n_transit} transit(s)).")
+              f"({n_by_type['TRANSIT']} transit, {n_by_type['FLARE']} flare, "
+              f"{n_by_type['MICROLENSING']} microlensing).")
         return events
+
+    # ── Asymmetry threshold separating flares from microlensing ───────────────
+    # A flare rises far faster than it decays (a "shark-fin"); microlensing is
+    # symmetric in time.  0.30 = the rise side must be ≥30% steeper than the decay
+    # side to be called a flare.  (Same value as the legacy AnomalyClassifier.)
+    FLARE_ASYMMETRY_THRESHOLD = 0.30
+
+    def _classify_departure(self, s, e, direction):
+        """
+        Label a baseline-departure run by the SHAPE of its flux profile.
+
+        Parameters
+        ----------
+        s, e : int
+            First and last row index of the run (where the rolling mean is
+            beyond the threshold).
+        direction : str
+            'DIP' (dimming) or 'BUMP' (brightening), from the sign of the
+            baseline departure.
+
+        Returns
+        -------
+        str : 'TRANSIT', 'FLARE' or 'MICROLENSING'
+            - DIP                      → TRANSIT
+            - BUMP, asymmetric profile → FLARE        (fast rise / slow decay)
+            - BUMP, symmetric profile  → MICROLENSING (compact-object lensing)
+        """
+        if direction == 'DIP':
+            return 'TRANSIT'
+
+        # Pad the run with one run-length of context on each side so the rising
+        # and decaying wings of the event are included in the slope estimate.
+        n   = len(self.df)
+        pad = max(5, e - s)
+        a   = max(0, s - pad)
+        b   = min(n - 1, e + pad)
+
+        # Analyse the ROLLING MEAN, not the raw flux: on an active star the raw
+        # scatter is so large it drowns the asymmetry signal.  The rolling mean is
+        # smooth, so a flare's characteristic "fast rise / slow decay" survives.
+        profile = self.df['rolling_mean'].values[a:b + 1]
+        if len(profile) < 5:
+            return 'MICROLENSING'   # too few points to judge shape → default
+
+        # Split the profile at its brightest point and measure the TOTAL rise vs
+        # the TOTAL decay (peak height above each wing) and the TIME taken on each
+        # side.  Slope = height / time.  A flare rises far faster than it decays.
+        peak       = int(np.argmax(profile))
+        peak_val   = profile[peak]
+        rise_h     = peak_val - profile[0]
+        decay_h    = peak_val - profile[-1]
+        rise_t     = max(peak, 1)
+        decay_t    = max(len(profile) - 1 - peak, 1)
+        rise_slope  = rise_h  / rise_t
+        decay_slope = decay_h / decay_t
+        asymmetry = (rise_slope - decay_slope) / (abs(rise_slope) + abs(decay_slope) + 1e-12)
+
+        return 'FLARE' if asymmetry > self.FLARE_ASYMMETRY_THRESHOLD else 'MICROLENSING'
 
 
 class AnomalyClassifier:

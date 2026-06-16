@@ -149,10 +149,13 @@ plotter.show_results()
 # ─────────────────────────────────────────────────────────────────────────────
 # 5.  Summary
 # ─────────────────────────────────────────────────────────────────────────────
-n_transits = sum(1 for ev in transits if ev['event_type'] == 'TRANSIT')
+counts = {t: sum(1 for ev in transits if ev['event_type'] == t)
+          for t in ('TRANSIT', 'FLARE', 'MICROLENSING')}
 print("\n" + "=" * 60)
 print(f"   Analysis of  {target_id}  complete.")
-print(f"   {n_transits} transit(s) detected via rolling-window baseline departure:")
+print(f"   {len(transits)} event(s) detected via rolling-window baseline departure")
+print(f"   ({counts['TRANSIT']} transit, {counts['FLARE']} flare, "
+      f"{counts['MICROLENSING']} microlensing):")
 for i, ev in enumerate(transits, start=1):
     print(f"     {i}. {ev['event_type']}  at t={ev['peak_time']:.2f} d  "
           f"(depth: {ev['depth_sigma']}σ / {ev['depth_frac'] * 100:.3f}%, "

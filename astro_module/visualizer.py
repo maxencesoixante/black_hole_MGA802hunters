@@ -225,7 +225,7 @@ class AstroPlotter:
         # detector: the event lives on the ROLLING-MEAN curve, so we mark it there
         # with a diamond and offset the label in screen pixels (scale-safe).
         # Legacy classifier events (no 'direction') keep the original behaviour.
-        marked_baseline = False
+        seen_types = set()   # so each event type gets exactly ONE legend entry
         for event in self.classified_results:
             peak_row   = self.df.loc[event['anomaly_peak_idx']]
             peak_time  = peak_row['time']
@@ -236,12 +236,13 @@ class AstroPlotter:
             is_baseline = 'direction' in event
             if is_baseline:
                 # The departure is in the rolling mean → anchor the marker there.
+                # Label only the first diamond of each type → one legend entry per
+                # event type (TRANSIT / FLARE / MICROLENSING), correctly coloured.
                 peak_y = peak_row['rolling_mean']
                 ax.scatter([peak_time], [peak_y], color=colour, marker='D',
                            s=70, edgecolors='white', linewidths=1.0, zorder=4,
-                           label=('Transit (baseline departure)'
-                                  if not marked_baseline else None))
-                marked_baseline = True
+                           label=(event_type if event_type not in seen_types else None))
+                seen_types.add(event_type)
 
                 # Screen-pixel offset: label below a dip, above a bump.
                 dy = -38 if event['direction'] == 'DIP' else 38
@@ -327,18 +328,21 @@ class AstroPlotter:
         ax.set_ylabel('Normalised Flux  (1.0 = typical brightness)', fontsize=12, labelpad=8)
 
         # Multi-line title: first line identifies the target; second line
-        # summarises the detection.  In rolling-window-only mode we report the
-        # number of transits; in legacy mode we also report point anomalies.
-        n_transits = sum(1 for ev in self.classified_results
-                         if ev.get('event_type') == 'TRANSIT')
-        n_events   = len(self.classified_results)
-        title = f'Automated Transit Detection  —  {self.target_id}\n'
+        # summarises the detection by event type.
+        n_events = len(self.classified_results)
+        counts   = {t: sum(1 for ev in self.classified_results
+                           if ev.get('event_type') == t)
+                    for t in ('TRANSIT', 'FLARE', 'MICROLENSING')}
+        title = f'Automated Event Detection  —  {self.target_id}\n'
         if self.show_point_anomalies and 'is_anomaly' in self.df.columns:
             n_anomalous = int(self.df['is_anomaly'].sum())
             title += (f'{n_anomalous} anomalous cadence(s) detected   •   '
                       f'{n_events} event(s) classified')
         else:
-            title += f'{n_transits} transit(s) detected (rolling-window baseline departure)'
+            # Show only the event types that actually occurred.
+            parts = [f'{n} {t.lower()}' for t, n in counts.items() if n]
+            summary = '   •   '.join(parts) if parts else 'no events'
+            title += f'{summary}  (rolling-window baseline departure)'
         # Only mention legacy channel-B diamonds when actually supplied.
         if self.baseline_events:
             title += f'   •   {len(self.baseline_events)} baseline-departure event(s)'
