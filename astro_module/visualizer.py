@@ -10,7 +10,6 @@ try:
 except ImportError:
     _SEABORN_AVAILABLE = False
 
-
 class AstroPlotter:
     """
     Generates a professional, annotated light-curve plot for the rolling-window
@@ -47,6 +46,9 @@ class AstroPlotter:
         'FLARE'       : '#E67E22',   # orange — stellar flare
         'MICROLENSING': '#27AE60',   # green  — compact-object microlensing
     }
+
+    # Boolean to know if the instance is for streamlit use
+    for_streamlit: bool = False,
 
     def __init__(
         self,
@@ -90,6 +92,9 @@ class AstroPlotter:
         # Fall back to recomputing the global reference if the caller did not pass it.
         self.global_median = global_median if global_median is not None else float(df_flagged['flux'].median())
         self.global_std    = global_std    if global_std    is not None else float(df_flagged['flux'].std())
+
+    def set_streamlit(self):
+        self.for_streamlit = True
 
     def show_results(self, save_path: str = None):
         """
@@ -215,8 +220,11 @@ class AstroPlotter:
             fig.savefig(save_path, dpi=150, bbox_inches='tight')
             print(f"Figure saved to: {save_path}")
 
-        # plt.show()  # Commenté pour Streamlit
-        # plt.close(fig)   # free memory after the window is closed
-
-        # Return the figure object for Streamlit
-        return fig
+        if self.for_streamlit :
+            # Return the figure object for Streamlit
+            self.for_streamlit = False
+            plt.savefig('astronomical_detector.png')
+            plt.close(fig)   # free memory after the window is closed
+        else:
+            plt.show()
+            plt.close(fig)   # free memory after the window is closed

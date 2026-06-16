@@ -1,5 +1,5 @@
 """
-app.py  is a Streamlit Interface for Automated Astronomical Anomaly Detector
+app.py  —  Streamlit Interface for Automated Astronomical Anomaly Detector
 MGA 802 : Introduction to Programming with Python
 
 This script provides a Streamlit-based web interface for the anomaly detection pipeline.
@@ -87,11 +87,12 @@ if st.sidebar.button("Run Analysis"):
         baseline_sigma=detector.baseline_sigma,
         global_median=detector.global_median,
         global_std=detector.global_std,
-        show_point_anomalies=False,
-        show_detection_band=False,
     )
-    fig = plotter.show_results()
-    st.pyplot(fig)
+    plotter.set_streamlit()
+    plotter.show_results()
+    # picture_fig = plotter.show_results()
+    # st.pyplot(picture_fig)
+    st.image('astronomical_detector.png')
 
     # Summary
     st.markdown("---")
