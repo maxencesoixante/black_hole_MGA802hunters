@@ -133,15 +133,13 @@ print("-" * 40)
 # no local ±σ band — instead the global baseline envelope plus a diamond on each
 # detected transit.
 plotter = AstroPlotter(
-    df_flagged           = df_flagged,
-    classified_results   = transits,
-    target_id            = target_id,
-    window               = WINDOW,
-    baseline_sigma       = detector.baseline_sigma,
-    global_median        = detector.global_median,
-    global_std           = detector.global_std,
-    show_point_anomalies = False,
-    show_detection_band  = False,
+    df_flagged         = df_flagged,
+    classified_results = transits,
+    target_id          = target_id,
+    window             = WINDOW,
+    baseline_sigma     = detector.baseline_sigma,
+    global_median      = detector.global_median,
+    global_std         = detector.global_std,
 )
 plotter.show_results()
 
