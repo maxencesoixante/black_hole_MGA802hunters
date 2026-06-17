@@ -48,7 +48,7 @@ class AstroPlotter:
     }
 
     # Boolean to know if the instance is for streamlit use
-    for_streamlit: bool = False,
+    for_streamlit: bool = False
 
     def __init__(
         self,
@@ -220,6 +220,7 @@ class AstroPlotter:
             fig.savefig(save_path, dpi=150, bbox_inches='tight')
             print(f"Figure saved to: {save_path}")
 
+        print("for_streamlit : ",self.for_streamlit )
         if self.for_streamlit :
             # Return the figure object for Streamlit
             self.for_streamlit = False

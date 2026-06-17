@@ -48,7 +48,7 @@ target_id = st.sidebar.text_input(
 WINDOW = st.sidebar.slider("Rolling-window size (data points)", 50, 500, DEFAULT_WINDOW)
 BASELINE_SIGMA = st.sidebar.slider("Baseline sigma threshold", 0.5, 3.0, DEFAULT_BASELINE_SIGMA)
 MIN_DURATION_DAYS = st.sidebar.slider("Minimum duration (days)", 0.05, 1.0, DEFAULT_MIN_DURATION_DAYS)
-TRIM_EDGES_DAYS = st.sidebar.slider("Trim edges (days)", 0.1, 2.0, DEFAULT_TRIM_EDGES_DAYS)
+TRIM_EDGES_DAYS = st.sidebar.slider("Trim edges (days)", 0.0, 2.0, DEFAULT_TRIM_EDGES_DAYS)
 
 # Main content area
 if st.sidebar.button("Run Analysis"):
