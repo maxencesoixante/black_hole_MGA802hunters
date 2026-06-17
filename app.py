@@ -16,10 +16,10 @@ from astro_module.visualizer import AstroPlotter
 
 # ── Pipeline configuration ─────────────────────────────────────────────────────
 # Default values for the pipeline parameters
-DEFAULT_WINDOW = 200
-DEFAULT_BASELINE_SIGMA = 1.0
-DEFAULT_MIN_DURATION_DAYS = 0.1
-DEFAULT_TRIM_EDGES_DAYS = 0.5
+default_window_streamlit = 200
+default_baseline_sigma_streamlit = 1.0
+default_min_duration_days_streamlit = 0.1
+default_trim_edges_days_streamlit = 0.5
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Streamlit App
@@ -45,10 +45,23 @@ target_id = st.sidebar.text_input(
 )
 
 # Allow the user to adjust parameters
-WINDOW = st.sidebar.slider("Rolling-window size (data points)", 50, 500, DEFAULT_WINDOW)
-BASELINE_SIGMA = st.sidebar.slider("Baseline sigma threshold", 0.5, 3.0, DEFAULT_BASELINE_SIGMA)
-MIN_DURATION_DAYS = st.sidebar.slider("Minimum duration (days)", 0.05, 1.0, DEFAULT_MIN_DURATION_DAYS)
-TRIM_EDGES_DAYS = st.sidebar.slider("Trim edges (days)", 0.0, 2.0, DEFAULT_TRIM_EDGES_DAYS)
+window_streamlit = st.sidebar.slider("Rolling-window size (data points)", 50, 500, default_window_streamlit,
+                                     key="rolling_window_slider")
+baseline_sigma_streamlit = st.sidebar.slider("Baseline sigma threshold", 0.5, 3.0, default_baseline_sigma_streamlit,
+                                             key="sigma_slider")
+min_duration_days_streamlit = st.sidebar.slider("Minimum duration (days)", 0.05, 1.0,
+                                                default_min_duration_days_streamlit, key="duration_slider")
+trim_edges_days_streamlit = st.sidebar.slider("Trim edges (days)", 0.0, 2.0, default_trim_edges_days_streamlit,
+                                              key="trim_slider")
+
+def reset_sliders():
+    st.session_state.rolling_window_slider = default_window_streamlit
+    st.session_state.sigma_slider = default_baseline_sigma_streamlit
+    st.session_state.duration_slider = default_min_duration_days_streamlit
+    st.session_state.trim_slider = default_trim_edges_days_streamlit
+
+reset_default_values_button = st.sidebar.button("Reset the sliders to the default values",
+                                        on_click= reset_sliders)
 
 # Main content area
 if st.sidebar.button("Run Analysis"):
@@ -61,7 +74,7 @@ if st.sidebar.button("Run Analysis"):
         fetcher = AstroFetcher(target_id)
         raw_data = fetcher.download_data(mission='Kepler')
 
-        clean_data = SignalCleaner(raw_data).process_data(trim_edges_days=TRIM_EDGES_DAYS)
+        clean_data = SignalCleaner(raw_data).process_data(trim_edges_days=trim_edges_days_streamlit)
         st.success("Data fetched and cleaned successfully!")
     except ValueError as e:
         st.error(f"Error: {e}")
@@ -69,10 +82,10 @@ if st.sidebar.button("Run Analysis"):
 
     # Step 2: Detect transits
     st.subheader("Step 2/3: Detecting transits...")
-    detector = AnomalyDetector(clean_data, window=WINDOW)
+    detector = AnomalyDetector(clean_data, window=window_streamlit)
     transits = detector.detect_baseline_departures(
-        baseline_sigma=BASELINE_SIGMA,
-        min_duration_days=MIN_DURATION_DAYS,
+        baseline_sigma=baseline_sigma_streamlit,
+        min_duration_days=min_duration_days_streamlit,
     )
     df_flagged = detector.df
     st.success(f"Detected {len(transits)} anomalies.")
@@ -83,7 +96,7 @@ if st.sidebar.button("Run Analysis"):
         df_flagged=df_flagged,
         classified_results=transits,
         target_id=target_id,
-        window=WINDOW,
+        window=window_streamlit,
         baseline_sigma=detector.baseline_sigma,
         global_median=detector.global_median,
         global_std=detector.global_std,
