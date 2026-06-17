@@ -48,7 +48,7 @@ class AstroPlotter:
     }
 
     # Boolean to know if the instance is for streamlit use
-    for_streamlit: bool = False,
+    for_streamlit: bool = False
 
     def __init__(
         self,
