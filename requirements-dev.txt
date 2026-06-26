@@ -1,0 +1,6 @@
+# Dependencies for the Automated Astronomical Anomaly Detector
+# Install with: pip install -r requirements-dev.txt ou pip install -e ".[dev]"
+
+-r requirements.txt
+sphinx>=4.0.0
+pytest>=6.0.0

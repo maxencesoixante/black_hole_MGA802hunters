@@ -3,7 +3,6 @@ import numpy as np
 # Pandas  → tabular data: DataFrames with named columns and integer row indices
 # NumPy   → fast numerical operations on arrays (mathematical functions, statistics)
 
-
 class AnomalyDetector:
     """
     Detects astrophysical events in a cleaned light curve by measuring how far
@@ -11,17 +10,24 @@ class AnomalyDetector:
 
     ── Core Concept: baseline departure ─────────────────────────────────────────
     A rolling window slides along the light curve, averaging `window` neighbouring
-    points to produce a smooth local baseline (the rolling mean).  When that local
+    points to produce a smooth local baseline (the rolling mean). When that local
     baseline drifts far enough from the star's global median, a sustained event is
     flagged:
 
         departure(σ_global) = (rolling_mean − global_median) / global_std
 
-    A sustained DIP is a transit; a sustained BUMP is a flare (asymmetric) or a
-    microlensing event (symmetric).  See detect_baseline_departures() for the full
+    A sustained DIP is a transit; a sustained BUMP is a flare (if asymmetric) or a
+    microlensing event (if symmetric).  See detect_baseline_departures() for the full
     method, its parameters, and its documented sensitivity limits.
     ─────────────────────────────────────────────────────────────────────────────
-    """
+
+    Attributes
+        ----------
+        df : pd.DataFrame
+        Cleaned light curve data with 'time' and 'flux' columns.
+        window : int
+            Number of data points in each rolling window.
+        """
 
     def __init__(self, df: pd.DataFrame, window: int = 200):
         """
@@ -36,15 +42,13 @@ class AnomalyDetector:
             Number of data points in each rolling window.
             Larger window  → smoother baseline, better for broad events.
             Smaller window → follows shorter events but noisier.
+            Default is 200.
 
-        ── OOP reminder: self ───────────────────────────────────────────────────
-        Every line "self.X = value" stores that value ON the object so any
-        method defined below can access it via self.X without needing it
-        passed as an argument each time.
-        ─────────────────────────────────────────────────────────────────────────
+        Raises
+        ------
+        ValueError
+            If the DataFrame does not contain 'time' and 'flux' columns.
         """
-        # Guard: raise a clear error early rather than crashing later with a
-        # confusing KeyError when we try to access missing columns.
         if 'time' not in df.columns or 'flux' not in df.columns:
             raise ValueError("DataFrame must contain 'time' and 'flux' columns.")
 
@@ -70,11 +74,11 @@ class AnomalyDetector:
 
         ── How it works ─────────────────────────────────────────────────────────
         A naive "point-by-point" detector compares each cadence to its own LOCAL
-        rolling mean.  That is BLIND to BROAD events: when a dip (or bump) lasts
+        rolling mean. That is BLIND to BROAD events: when a dip (or bump) lasts
         LONGER than the rolling window, the rolling mean simply slides into the
-        event and no single point ever "sticks out".  The event hides itself
+        event and no single point ever "sticks out". The event hides itself
         inside the baseline — the same self-erasing effect that SignalCleaner
-        avoids by refusing flatten().  On KIC 11904151 this is why the ~0.04%
+        avoids by refusing flatten(). On KIC 11904151 this is why the ~0.04%
         depression near day 229 is visible in the rolling-mean curve yet would be
         flagged zero times by a point-wise test.
 
@@ -85,22 +89,22 @@ class AnomalyDetector:
 
         A run of points whose departure stays beyond ±baseline_sigma for at least
         min_duration_days (and min_points cadences) is reported as a candidate
-        event.  The point requirement also rejects the flat rolling-mean plateaus
+        event. The point requirement also rejects the flat rolling-mean plateaus
         that appear across observation gaps (few points spanning a long time).
 
         ── Known sensitivity limit (documented, not a bug) ──────────────────────
         This method only sees BROAD departures of the baseline, so it has a blind
         spot for two event families:
 
-          • FLARES — short, sharp brightenings (minutes–~1 h).  The rolling window
+          • FLARES — short, sharp brightenings (minutes–~1 h). The rolling window
             dilutes them; on an active star they drown in the rotational
             modulation (tested on GJ 1243).
           • FAINT, SHORT MICROLENSING — e.g. KOI-3278's self-lensing pulse
             (0.1 % over 5 h) is only ~0.11σ_global on its spotted host: below the
-            threshold and too brief.  Only the host's broad variability is seen.
+            threshold and too brief. Only the host's broad variability is seen.
 
         The shape CLASSIFIER below can still label such events (FLARE / MICROLENSING)
-        once detected — the gap is detection, not labelling.  Catching them would
+        once detected — the gap is detection, not labelling. Catching them would
         need a complementary SHORT-timescale channel (brief-spike detection for
         flares) or PERIOD FOLDING to stack a weak periodic signal.
 
@@ -108,19 +112,18 @@ class AnomalyDetector:
         ----------
         baseline_sigma : float
             How far the rolling mean must drift from the global baseline,
-            measured in GLOBAL standard deviations, to count as a departure.
-            Note: a rolling mean averages `window` points, so its own scatter is
-            ~std/sqrt(window) — tiny (≈0.07σ_global for window=200).  A drift of
-            1.0σ_global is therefore ~14× the baseline's own noise: a very large,
-            highly significant excursion.
+            measured in global standard deviations, to count as a departure.
+            Default is 1.0.
         min_duration_days : float
             Minimum time span of a departure run to be reported (filters blips).
+            Default is 0.1.
         min_points : int
-            Minimum number of cadences in a run (filters gap-straddling artefacts,
-            which span a long time but contain very few real points).
+            Minimum number of cadences in a run (filters gap-straddling artefacts).
+            Default is 50.
         flag : bool
             If True, add a boolean 'is_baseline_anomaly' column to self.df marking
-            the peak cadence of each reported run, so a visualiser can draw it.
+            the peak cadence of each reported run, so a visualizer can draw it.
+            Default is True.
 
         Returns
         -------
@@ -178,7 +181,7 @@ class AnomalyDetector:
         # np.flatnonzero returns the positions of those transitions.
         m = mask.astype(int)
         starts = np.flatnonzero(np.diff(np.concatenate(([0], m))) == 1)
-        ends   = np.flatnonzero(np.diff(np.concatenate((m, [0]))) == -1)  # inclusive
+        ends   = np.flatnonzero(np.diff(np.concatenate((m, [0]))) == -1)
 
         events = []
         flag_indices = []
@@ -251,7 +254,7 @@ class AnomalyDetector:
 
     # ── Asymmetry threshold separating flares from microlensing ───────────────
     # A flare rises far faster than it decays (a "shark-fin"); microlensing is
-    # symmetric in time.  0.30 = the rise side must be ≥30% steeper than the decay
+    # symmetric in time. 0.30 = the rise side must be ≥30% steeper than the decay
     # side to be called a flare.
     FLARE_ASYMMETRY_THRESHOLD = 0.30
 
@@ -270,7 +273,8 @@ class AnomalyDetector:
 
         Returns
         -------
-        str : 'TRANSIT', 'FLARE' or 'MICROLENSING'
+        str
+            'TRANSIT', 'FLARE', or 'MICROLENSING'.
             - DIP                      → TRANSIT
             - BUMP, asymmetric profile → FLARE        (fast rise / slow decay)
             - BUMP, symmetric profile  → MICROLENSING (compact-object lensing)
