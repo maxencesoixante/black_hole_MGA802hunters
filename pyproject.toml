@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "black_hole_MGA802hunters"
+version = "0.1.0"
+authors = [
+    {name = "Maxence DUBOIS"},
+    {name = "Jules HUA"},
+    {name = "Alexandre HALLONET"}
+]
+license = {file = "LICENSE"}
+description = "Automated Astronomical Anomaly Detector for detecting transits, flares, and microlensing events in light curves."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "lightkurve>=2.0.0",
+    "pandas>=1.3.0",
+    "numpy>=1.21.0",
+    "matplotlib>=3.4.0",
+    "seaborn>=0.11.0",
+    "streamlit>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "sphinx>=4.0.0",
+    "pytest>=6.0.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/maxencesoixante/black_hole_MGA802hunters"
+"Bug Tracker" = "https://github.com/maxencesoixante/black_hole_MGA802hunters/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]

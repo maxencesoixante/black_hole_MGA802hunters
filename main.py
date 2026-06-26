@@ -17,9 +17,12 @@ Then type the Kepler/TESS identifier when prompted (e.g.  KIC 11904151).
 # ── Imports ───────────────────────────────────────────────────────────────────
 # We import only what we need from each module.
 # The  from X import Y  syntax makes Y available directly without the X. prefix.
-from astro_module.data_handler  import AstroFetcher, SignalCleaner
-from astro_module.anomaly_engine import AnomalyDetector
-from astro_module.visualizer    import AstroPlotter
+# from astro_module.data_handler  import AstroFetcher, SignalCleaner
+# from astro_module.anomaly_engine import AnomalyDetector
+# from astro_module.visualizer    import AstroPlotter
+
+# There is a __init__ so we can directly import what we want from the folder astro_module
+from astro_module  import AstroFetcher, SignalCleaner, AnomalyDetector, AstroPlotter
 
 
 # ── Pipeline configuration ─────────────────────────────────────────────────────

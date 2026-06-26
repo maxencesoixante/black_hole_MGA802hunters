@@ -105,6 +105,11 @@ class AstroPlotter:
         save_path : str or None
             Optional file path to also save the figure to disk.
             If None (default), the figure is only shown on screen.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The rendered figure object.
         """
 
         # ── 1. Global visual styling ──────────────────────────────────────────
@@ -220,11 +225,11 @@ class AstroPlotter:
             fig.savefig(save_path, dpi=150, bbox_inches='tight')
             print(f"Figure saved to: {save_path}")
 
-        if self.for_streamlit :
-            # Return the figure object for Streamlit
+        if self.for_streamlit:
+            # Return the figure object for Streamlit without closing it
             self.for_streamlit = False
-            plt.savefig('astronomical_detector.png')
-            plt.close(fig)   # free memory after the window is closed
+            return fig
         else:
+            # Show the figure and close it to free memory
             plt.show()
-            plt.close(fig)   # free memory after the window is closed
+            plt.close(fig)

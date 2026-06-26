@@ -9,6 +9,7 @@ How to run:
 """
 
 # ── Imports ───────────────────────────────────────────────────────────────────
+import matplotlib.pyplot as plt
 import streamlit as st
 from astro_module.data_handler import AstroFetcher, SignalCleaner
 from astro_module.anomaly_engine import AnomalyDetector
@@ -20,17 +21,18 @@ default_window_streamlit = 200
 default_baseline_sigma_streamlit = 1.0
 default_min_duration_days_streamlit = 0.1
 default_trim_edges_days_streamlit = 0.5
+default_flare_asymmetry_threshold = 0.3
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Streamlit App
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Astronomical Anomaly Detector",
+    page_title="Astronomical anomaly detector",
     page_icon="🔭",
     layout="wide"
 )
 
-st.title("🔭 Automated Astronomical Anomaly Detector")
+st.title("🔭 Automated astronomical anomaly detector 🌠")
 st.markdown("""
     **MGA 802 — Session Project (Maxence, Jules, Alexandre)**
 
@@ -39,10 +41,26 @@ st.markdown("""
 
 # Sidebar for user input
 st.sidebar.header("Input Parameters")
-target_id = st.sidebar.text_input(
-    "Enter the star identifier to analyse (e.g., KIC 11904151):",
-    value="KIC 11904151"
+
+# Options for demo
+options_demo = ['KIC 11904151','KIC 11446443', 'HAT-P-7', 'Kepler-8', 'TIC 100100827', 'TIC 261136679']
+
+# Exclusive choice between manual input and dropdown menu for mission
+input_method = st.sidebar.radio(
+    "Choose input method for mission:",
+    ["Manual Input", "Dropdown Menu preset examples"]
 )
+
+if input_method == "Manual Input":
+    target_id = st.sidebar.text_input(
+        "Enter the star identifier to analyse (e.g., KIC 11904151):",
+        value="KIC 11904151"
+    )
+else:
+    choix_demo = st.sidebar.selectbox(
+        "Choose a mission for the demo:", options_demo
+    )
+    target_id = choix_demo
 
 # Allow the user to adjust parameters
 window_streamlit = st.sidebar.slider("Rolling-window size (data points)", 50, 500, default_window_streamlit,
@@ -53,12 +71,18 @@ min_duration_days_streamlit = st.sidebar.slider("Minimum duration (days)", 0.05,
                                                 default_min_duration_days_streamlit, key="duration_slider")
 trim_edges_days_streamlit = st.sidebar.slider("Trim edges (days)", 0.0, 2.0, default_trim_edges_days_streamlit,
                                               key="trim_slider")
+flare_asymmetry_threshold_streamlit = st.sidebar.slider("Flare asymmetry threshold", -1.0, 1.0,
+                                                        default_flare_asymmetry_threshold, key="flare_slider")
+
+# Add the possibility to upload a local CSV file
+uploaded_file = st.sidebar.file_uploader("Upload a local CSV file (optional)", type=["csv"])
 
 def reset_sliders():
     st.session_state.rolling_window_slider = default_window_streamlit
     st.session_state.sigma_slider = default_baseline_sigma_streamlit
     st.session_state.duration_slider = default_min_duration_days_streamlit
     st.session_state.trim_slider = default_trim_edges_days_streamlit
+    st.session_state.flare_slider = default_flare_asymmetry_threshold
 
 reset_default_values_button = st.sidebar.button("Reset the sliders to the default values",
                                         on_click= reset_sliders)
@@ -71,11 +95,21 @@ if st.sidebar.button("Run Analysis"):
     # Step 1: Fetch and clean data
     st.subheader("Step 1/3: Fetching and cleaning data...")
     try:
-        fetcher = AstroFetcher(target_id)
-        raw_data = fetcher.download_data(mission='Kepler')
-
-        clean_data = SignalCleaner(raw_data).process_data(trim_edges_days=trim_edges_days_streamlit)
-        st.success("Data fetched and cleaned successfully!")
+        if uploaded_file is not None:
+            # Load the local CSV file
+            import pandas as pd
+            df = pd.read_csv(uploaded_file)
+            if 'time' not in df.columns or 'flux' not in df.columns:
+                st.error("Error: The CSV file must contain 'time' and 'flux' columns.")
+                st.stop()
+            clean_data = SignalCleaner(df).process_data(trim_edges_days=trim_edges_days_streamlit)
+            st.success("Local CSV file loaded and cleaned successfully!")
+        else:
+            # Use the mission ID
+            fetcher = AstroFetcher(target_id)
+            raw_data = fetcher.download_data(mission='Kepler')
+            clean_data = SignalCleaner(raw_data).process_data(trim_edges_days=trim_edges_days_streamlit)
+            st.success("Data fetched and cleaned successfully!")
     except ValueError as e:
         st.error(f"Error: {e}")
         st.stop()
@@ -83,6 +117,7 @@ if st.sidebar.button("Run Analysis"):
     # Step 2: Detect transits
     st.subheader("Step 2/3: Detecting transits...")
     detector = AnomalyDetector(clean_data, window=window_streamlit)
+    detector.FLARE_ASYMMETRY_THRESHOLD = flare_asymmetry_threshold_streamlit
     transits = detector.detect_baseline_departures(
         baseline_sigma=baseline_sigma_streamlit,
         min_duration_days=min_duration_days_streamlit,
@@ -102,11 +137,9 @@ if st.sidebar.button("Run Analysis"):
         global_std=detector.global_std,
     )
     plotter.set_streamlit()
-    plotter.show_results()
-    # picture_fig = plotter.show_results()
-    # st.pyplot(picture_fig)
-    st.image('astronomical_detector.png')
-
+    fig = plotter.show_results()
+    st.pyplot(fig)
+    plt.close(fig)  # Free memory after displaying the plot
     # Summary
     st.markdown("---")
     st.subheader("Summary")
@@ -126,5 +159,9 @@ st.markdown("""
     **About:**
     This app is part of the MGA 802 project. It uses a rolling-window baseline departure method to detect transits in astronomical light curves.
     
-    **Source Code:** [GitHub Repository](#)
+    **Source Code:** [GitHub Repository](https://github.com/maxencesoixante/black_hole_MGA802hunters) 🚀
+    
+    It is inspired and designed to help the Black Hole Hunters community from Adler, University of Minnesota and University of Oxford
+    
+    **More info:** [Black Hole Hunters website](https://www.zooniverse.org/projects/cobalt-lensing/black-hole-hunters) 🌌
 """)
