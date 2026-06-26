@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>anomaly_engine module &#8212; Black Hole Hunters  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="data_handler module" href="data_handler.html" />
+    <link rel="prev" title="astro_module" href="modules.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-anomaly_engine">
+<span id="anomaly-engine-module"></span><h1>anomaly_engine module<a class="headerlink" href="#module-anomaly_engine" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="anomaly_engine.AnomalyDetector">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">anomaly_engine.</span></span><span class="sig-name descname"><span class="pre">AnomalyDetector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">200</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#anomaly_engine.AnomalyDetector" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Detects astrophysical events in a cleaned light curve by measuring how far
+the ROLLING-MEAN baseline drifts from the star’s GLOBAL baseline.</p>
+<p>── Core Concept: baseline departure ─────────────────────────────────────────
+A rolling window slides along the light curve, averaging <cite>window</cite> neighbouring
+points to produce a smooth local baseline (the rolling mean). When that local
+baseline drifts far enough from the star’s global median, a sustained event is
+flagged:</p>
+<blockquote>
+<div><p>departure(σ_global) = (rolling_mean − global_median) / global_std</p>
+</div></blockquote>
+<p>A sustained DIP is a transit; a sustained BUMP is a flare (if asymmetric) or a
+microlensing event (if symmetric).  See detect_baseline_departures() for the full
+method, its parameters, and its documented sensitivity limits.
+─────────────────────────────────────────────────────────────────────────────</p>
+<dl>
+<dt>Attributes</dt><dd><p>df : pd.DataFrame
+Cleaned light curve data with ‘time’ and ‘flux’ columns.
+window : int</p>
+<blockquote>
+<div><p>Number of data points in each rolling window.</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="anomaly_engine.AnomalyDetector.FLARE_ASYMMETRY_THRESHOLD">
+<span class="sig-name descname"><span class="pre">FLARE_ASYMMETRY_THRESHOLD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.3</span></span><a class="headerlink" href="#anomaly_engine.AnomalyDetector.FLARE_ASYMMETRY_THRESHOLD" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="anomaly_engine.AnomalyDetector.detect_baseline_departures">
+<span class="sig-name descname"><span class="pre">detect_baseline_departures</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">baseline_sigma</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_duration_days</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#anomaly_engine.AnomalyDetector.detect_baseline_departures" title="Link to this definition">¶</a></dt>
+<dd><p>Detect SUSTAINED departures of the rolling baseline from the global one.</p>
+<p>── How it works ─────────────────────────────────────────────────────────
+A naive “point-by-point” detector compares each cadence to its own LOCAL
+rolling mean. That is BLIND to BROAD events: when a dip (or bump) lasts
+LONGER than the rolling window, the rolling mean simply slides into the
+event and no single point ever “sticks out”. The event hides itself
+inside the baseline — the same self-erasing effect that SignalCleaner
+avoids by refusing flatten(). On KIC 11904151 this is why the ~0.04%
+depression near day 229 is visible in the rolling-mean curve yet would be
+flagged zero times by a point-wise test.</p>
+<p>This method asks a different question — not “does this point leave its
+LOCAL band?” but “does the LOCAL baseline leave the GLOBAL baseline?”:</p>
+<blockquote>
+<div><p>departure(σ_global) = (rolling_mean − global_median) / global_std</p>
+</div></blockquote>
+<p>A run of points whose departure stays beyond ±baseline_sigma for at least
+min_duration_days (and min_points cadences) is reported as a candidate
+event. The point requirement also rejects the flat rolling-mean plateaus
+that appear across observation gaps (few points spanning a long time).</p>
+<p>── Known sensitivity limit (documented, not a bug) ──────────────────────
+This method only sees BROAD departures of the baseline, so it has a blind
+spot for two event families:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>FLARES — short, sharp brightenings (minutes–~1 h). The rolling window
+dilutes them; on an active star they drown in the rotational
+modulation (tested on GJ 1243).</p></li>
+<li><p>FAINT, SHORT MICROLENSING — e.g. KOI-3278’s self-lensing pulse
+(0.1 % over 5 h) is only ~0.11σ_global on its spotted host: below the
+threshold and too brief. Only the host’s broad variability is seen.</p></li>
+</ul>
+</div></blockquote>
+<p>The shape CLASSIFIER below can still label such events (FLARE / MICROLENSING)
+once detected — the gap is detection, not labelling. Catching them would
+need a complementary SHORT-timescale channel (brief-spike detection for
+flares) or PERIOD FOLDING to stack a weak periodic signal.</p>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>baseline_sigma<span class="classifier">float</span></dt><dd><p>How far the rolling mean must drift from the global baseline,
+measured in global standard deviations, to count as a departure.
+Default is 1.0.</p>
+</dd>
+<dt>min_duration_days<span class="classifier">float</span></dt><dd><p>Minimum time span of a departure run to be reported (filters blips).
+Default is 0.1.</p>
+</dd>
+<dt>min_points<span class="classifier">int</span></dt><dd><p>Minimum number of cadences in a run (filters gap-straddling artefacts).
+Default is 50.</p>
+</dd>
+<dt>flag<span class="classifier">bool</span></dt><dd><p>If True, add a boolean ‘is_baseline_anomaly’ column to self.df marking
+the peak cadence of each reported run, so a visualizer can draw it.
+Default is True.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h2>Returns<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>list of dict, each containing:</dt><dd><p>‘direction’     : ‘DIP’ (dimming) or ‘BUMP’ (brightening)
+‘candidate’     : human-readable guess for the event type
+‘peak_time’     : timestamp (days) of the strongest departure
+‘depth_sigma’   : strongest <a href="#id1"><span class="problematic" id="id2">|departure|</span></a> in the run, in σ_global
+‘depth_frac’    : same depth expressed as a fraction of the baseline
+‘duration_days’ : time span of the run
+‘n_points’      : number of cadences in the run
+‘peak_idx’      : DataFrame row index of the strongest departure</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Black Hole Hunters</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">astro_module</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">anomaly_engine module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data_handler.html">data_handler module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html">visualizer module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">astro_module</a><ul>
+      <li>Previous: <a href="modules.html" title="previous chapter">astro_module</a></li>
+      <li>Next: <a href="data_handler.html" title="next chapter">data_handler module</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Maxence DUBOIS, Alexandre HALLONET, Jules HUA.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/anomaly_engine.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

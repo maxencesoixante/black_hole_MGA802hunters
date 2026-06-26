@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>data_handler module &#8212; Black Hole Hunters  documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="visualizer module" href="visualizer.html" />
+    <link rel="prev" title="anomaly_engine module" href="anomaly_engine.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-data_handler">
+<span id="data-handler-module"></span><h1>data_handler module<a class="headerlink" href="#module-data_handler" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="data_handler.AstroFetcher">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">data_handler.</span></span><span class="sig-name descname"><span class="pre">AstroFetcher</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_handler.AstroFetcher" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class responsible for fetching light curves from NASA archives
+or loading local datasets (e.g., from Kaggle).</p>
+<p>── OOP Concept: What is a Class? ───────────────────────────────────────────
+A class is a blueprint for creating objects.  It bundles together:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>attributes  — data the object stores (e.g. which target star it works on)</p></li>
+<li><p>methods     — actions the object can perform (e.g. download data)</p></li>
+</ul>
+</div></blockquote>
+<p>Think of it like a cookie cutter: the class is the cutter, each object
+you create from it is an individual cookie that shares the same shape
+but can hold its own data.
+─────────────────────────────────────────────────────────────────────────────</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="data_handler.AstroFetcher.download_data">
+<span class="sig-name descname"><span class="pre">download_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Kepler'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_handler.AstroFetcher.download_data" title="Link to this definition">¶</a></dt>
+<dd><p>Query the NASA MAST online archive and download the first available
+light curve for this target.</p>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>mission<span class="classifier">str</span></dt><dd><p>The space telescope mission to query.
+Supported values: ‘Kepler’ or ‘TESS’.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h2>Returns<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>lightkurve.LightCurve</dt><dd><p>A Lightkurve object containing time and flux arrays.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_handler.AstroFetcher.load_local_csv">
+<span class="sig-name descname"><span class="pre">load_local_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_handler.AstroFetcher.load_local_csv" title="Link to this definition">¶</a></dt>
+<dd><p>Load a light curve from a local CSV file instead of downloading from NASA.
+Useful for working offline or with Kaggle datasets.</p>
+<p>The CSV must have at least two columns named exactly ‘time’ and ‘flux’.</p>
+<section id="id1">
+<h2>Parameters<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>filepath<span class="classifier">str</span></dt><dd><p>Full or relative path to the CSV file on disk.</p>
+</dd>
+</dl>
+</section>
+<section id="id2">
+<h2>Returns<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h2>
+<dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>A Pandas DataFrame with at least the ‘time’ and ‘flux’ columns.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="data_handler.SignalCleaner">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">data_handler.</span></span><span class="sig-name descname"><span class="pre">SignalCleaner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_handler.SignalCleaner" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class responsible for preprocessing light curve data.
+Adapts automatically to Lightkurve objects or Pandas DataFrames.</p>
+<section id="important-why-we-do-not-use-flatten">
+<h2>IMPORTANT — why we do NOT use flatten():<a class="headerlink" href="#important-why-we-do-not-use-flatten" title="Link to this heading">¶</a></h2>
+<p>Lightkurve’s flatten() fits and divides out a smooth trend over a long
+window (typically 401 points). This removes instrumental drift, which is
+useful — but it also suppresses exoplanet transit dips, because a ~15-point
+dip looks like a short-term trend to the smoother.</p>
+<p>Instead, we normalise the flux by its median so all values sit near 1.0.
+This keeps the relative depth of transits (~0.1–1% dips) intact while
+still making the signal scale-invariant and comparable across targets.</p>
+</section>
+<section id="important-why-our-5-clipping-is-asymmetric">
+<h2>IMPORTANT — why our 5σ clipping is ASYMMETRIC:<a class="headerlink" href="#important-why-our-5-clipping-is-asymmetric" title="Link to this heading">¶</a></h2>
+<p>The same reasoning applies to outlier removal.  Cosmic rays and saturation
+push the flux UP, but transits push it DOWN — and a deep transit can be a
+−10σ point.  A symmetric ±5σ clip would therefore delete the transit bottoms
+along with the cosmic rays.  So we clip ONLY the upper side (mean + 5σ /
+sigma_upper=5) and leave every downward excursion untouched.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="data_handler.SignalCleaner.process_data">
+<span class="sig-name descname"><span class="pre">process_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trim_edges_days</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_handler.SignalCleaner.process_data" title="Link to this definition">¶</a></dt>
+<dd><p>Clean and normalise the light curve regardless of its input format.</p>
+<dl class="simple">
+<dt>Steps applied:</dt><dd><ol class="arabic simple">
+<li><p>Remove rows with missing values (NaN).</p></li>
+<li><p>Remove UPWARD outliers using the asymmetric 5-sigma rule.</p></li>
+<li><p>Normalise flux around 1.0 by dividing every value by the median.</p></li>
+<li><p>Optionally trim the quarter edges (thermal-ramp guard).</p></li>
+</ol>
+</dd>
+</dl>
+<section id="id3">
+<h3>Parameters<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>trim_edges_days<span class="classifier">float</span></dt><dd><p>If &gt; 0, drop every cadence within this many days of the start and of
+the end of the light curve, to discard the start-of-quarter thermal
+ramp.  Default 0.0 keeps the previous behaviour (no trimming).</p>
+</dd>
+</dl>
+</section>
+<section id="id4">
+<h3>Returns<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>pd.DataFrame</dt><dd><p>A cleaned DataFrame with ‘time’ and ‘flux’ columns, where
+flux ≈ 1.0 represents the star’s typical observed brightness.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="data_handler.SignalCleaner.save_to_csv">
+<span class="sig-name descname"><span class="pre">save_to_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'clean_data.csv'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#data_handler.SignalCleaner.save_to_csv" title="Link to this definition">¶</a></dt>
+<dd><p>Persist the cleaned DataFrame to disk as a CSV file.</p>
+<p>The file is saved at  data/processed/&lt;filename&gt;  relative to the
+current working directory.  The folder is created automatically
+if it does not already exist.</p>
+<section id="id5">
+<h3>Parameters<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<p>df       : pd.DataFrame  — the cleaned light curve to save
+filename : str           — desired output file name</p>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Black Hole Hunters</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">astro_module</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="anomaly_engine.html">anomaly_engine module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">data_handler module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html">visualizer module</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">astro_module</a><ul>
+      <li>Previous: <a href="anomaly_engine.html" title="previous chapter">anomaly_engine module</a></li>
+      <li>Next: <a href="visualizer.html" title="next chapter">visualizer module</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Maxence DUBOIS, Alexandre HALLONET, Jules HUA.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/data_handler.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
